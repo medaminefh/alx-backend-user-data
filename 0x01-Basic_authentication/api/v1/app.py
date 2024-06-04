@@ -21,6 +21,44 @@ def not_found(error) -> str:
     return jsonify({"error": "Not found"}), 404
 
 
+@app.errorhandler(401)
+def unauthorized(error) -> str:
+    """ Unauthorized handler
+    """
+    return jsonify({"error": "Unauthorized"}), 401
+
+
+@app.errorhandler(403)
+def forbidden(error) -> str:
+    """ Forbidden handler
+    """
+    return jsonify({"error": "Forbidden"}), 403
+
+
+@app.before_request
+def before_request() -> str:
+    """ Before request handler
+    """
+    routes = ['/api/v1/status/', '/api/v1/unauthorized/', '/api/v1/forbidden/']
+    if request.path not in routes and os.getenv('AUTH_TYPE', '') == 'basic_auth':
+        from api.v1.auth.basic_auth import BasicAuth
+        auth = BasicAuth()
+        current_user = auth.current_user(request)
+        if current_user is None:
+            abort(401)
+        if current_user.is_admin is False:
+            abort(403)
+
+    if request.path not in routes and os.getenv('AUTH_TYPE', '') == 'session_auth':
+        from api.v1.auth.session_auth import SessionAuth
+        auth = SessionAuth()
+        current_user = auth.current_user(request)
+        if current_user is None:
+            abort(401)
+        if current_user.is_admin is False:
+            abort(403)
+
+
 if __name__ == "__main__":
     host = getenv("API_HOST", "0.0.0.0")
     port = getenv("API_PORT", "5000")
